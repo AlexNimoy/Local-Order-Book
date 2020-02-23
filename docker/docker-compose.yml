@@ -1,0 +1,30 @@
+version: '3'
+services:
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6377:6379"
+
+  producer:
+    build:
+      context: ../.
+      dockerfile: docker/Dockerfile
+    command: ruby /app/pub-sub/producer.rb
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+
+  # worker:
+  #   build:
+  #     context: ../.
+  #     dockerfile: docker/Dockerfile
+  #   command: ruby /app/pub-sub/worker.rb
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 10 
+  #   environment:
+  #     - REDIS_HOST=redis
+  #   depends_on:
+  #     - redis

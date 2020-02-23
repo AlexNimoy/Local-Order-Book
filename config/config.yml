@@ -1,0 +1,4 @@
+currency_pairs:
+- BTCUSDT:
+    ws: 'wss://stream.binance.com:9443/ws/btcusdt@depth'
+    api: 'https://www.binance.com/api/v3/depth?symbol=BTCUSDT&limit=1000'
