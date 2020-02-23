@@ -1,10 +1,13 @@
+# frozen_string_literal: true
+
 require 'yaml'
 
 module Binance
+  # Singleton class for config
   class ConfigLoader
     @instance = new
     private_class_method :new
-     
+
     def self.instance
       @instance
     end

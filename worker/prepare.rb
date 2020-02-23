@@ -1,13 +1,15 @@
+# frozen_string_literal: true
+
 require 'json'
-require 'pry'
 require_relative '../store/store'
 
 module Binance
   module Worker
+    # Prepare diff data
     class Prepare
-      def initialize(params, options={})
+      def initialize(params, options = {})
         @params = params
-        @store = options[:store] || ::Binance::Store.new 
+        @store = options[:store] || ::Binance::Store.new
       end
 
       def call
@@ -15,30 +17,27 @@ module Binance
         if diff?(parsed) && !old_diff?(parsed)
           if first_diff?(parsed) && first_diff_correct?(parsed)
             @store.save_diff(parsed)
-          else 
-            if diff_correct?(parsed)
-							@store.save_diff(parsed)
-            else
-              p "broken"
-						end
+          elsif diff_correct?(parsed)
+            @store.save_diff(parsed)
+          else
+            p 'broken'
           end
-          p "correct"
         end
 
-        if snapshot?(parsed)
-          @store.save_snapshot(parsed)
-          @store.delete_last_diff(parsed)
-        end
+        return unless snapshot?(parsed)
+
+        @store.save_snapshot(parsed)
+        @store.delete_last_diff(parsed)
       end
-       
-      private 
+
+      private
 
       def diff?(hash)
-        hash.has_key?('e')
+        hash.key?('e')
       end
 
       def snapshot?(hash)
-        hash.has_key?('lastUpdateId')
+        hash.key?('lastUpdateId')
       end
 
       def last_update(hash)
@@ -52,7 +51,7 @@ module Binance
       end
 
       def first_diff?(hash)
-        !@store.currency_info(hash).has_key?('U')
+        !@store.currency_info(hash).key?('U')
       end
 
       def first_diff_correct?(hash)
@@ -61,8 +60,8 @@ module Binance
       end
 
       def diff_correct?(hash)
-        hash['U'] == @store.currency_info(hash)["u"].to_i + 1
-      end 
+        hash['U'] == @store.currency_info(hash)['u'].to_i + 1
+      end
     end
   end
 end

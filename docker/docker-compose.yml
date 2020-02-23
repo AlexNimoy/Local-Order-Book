@@ -4,27 +4,44 @@ services:
   redis:
     image: redis:latest
     ports:
-      - "6377:6379"
+      - 6377:6379
 
-  producer:
+  listener:
     build:
       context: ../.
       dockerfile: docker/Dockerfile
-    command: ruby /app/pub-sub/producer.rb
+    command: ruby /app/listener/run.rb
     environment:
       - REDIS_HOST=redis
     depends_on:
       - redis
 
-  # worker:
-  #   build:
-  #     context: ../.
-  #     dockerfile: docker/Dockerfile
-  #   command: ruby /app/pub-sub/worker.rb
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 10 
-  #   environment:
-  #     - REDIS_HOST=redis
-  #   depends_on:
-  #     - redis
+  worker:
+    build:
+      context: ../.
+      dockerfile: docker/Dockerfile
+    command: ruby /app/worker/run.rb
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+      - listener
+
+  api:
+    build:
+      context: ../.
+      dockerfile: docker/Dockerfile
+    command: bundle exec rackup api/config.ru --port 3000 --host 0.0.0.0
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - 8094:3000
+    depends_on:
+      - redis
+
+  front:
+    build:
+      context: ../order_book_front/.
+      dockerfile: ../docker/front/Dockerfile.prod
+    ports:
+      - 8095:80

@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
 require 'net/http'
 
 module Binance
   module Listener
     module Snapshot
+      # HTTP client
       class Receive
         def initialize(uri)
           @uri = uri
@@ -17,4 +20,3 @@ module Binance
     end
   end
 end
-

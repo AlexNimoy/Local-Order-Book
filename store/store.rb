@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 require 'redis'
-require 'pry'
 require 'securerandom'
 
 module Binance
-  class Store 
+  # Redis store
+  class Store
+    ZERO_AMOUNT = '0.00000000'
     def initialize
       @queue = ENV.fetch('WORK_QUEUE', 'binance_queue')
       @tasks = ENV.fetch('TASKS_HASH', 'binance_tasks')
@@ -17,13 +20,12 @@ module Binance
 
     def reset_store
       @client.flushall
-		end
+    end
 
-    # Add task uuid to queue
-    # and
-    # add task payload to tasks hash
-    #
-    # @param [String] value 
+    def select_all_from(table)
+      @client.hgetall(table)
+    end
+
     def queue_work(value)
       key = SecureRandom.uuid
       @client.multi do
@@ -34,11 +36,11 @@ module Binance
 
     def next_task
       uuid = @client.lpop(@queue)
-      if uuid
-        task_payload = @client.hget(@tasks, uuid)
-        @client.hdel(@tasks, uuid)
-        task_payload
-      end
+      return unless uuid
+
+      task_payload = @client.hget(@tasks, uuid)
+      @client.hdel(@tasks, uuid)
+      task_payload
     end
 
     def snapshot_last_update(hash)
@@ -57,28 +59,34 @@ module Binance
       @client.hdel("#{hash['s']}_info", 'U', 'u')
     end
 
-    def currency_info(hash) 
+    def currency_info(hash)
       @client.hgetall("#{hash['s']}_info")
     end
 
     def save_diff(hash)
       @client.multi do
         @client.hmset("#{hash['s']}_info", 'U', hash['U'], 'u', hash['u'])
-
-        @client.hdel("#{hash['s']}_bids", zero_keys(hash, 'b')) unless zero_keys(hash, 'b').empty?
-        @client.hmset("#{hash['s']}_bids", *correct_keys(hash, 'b')) unless correct_keys(hash, 'b').empty?
-
-        @client.hdel("#{hash['s']}_asks", zero_keys(hash, 'a')) unless zero_keys(hash, 'a').empty?
-        @client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a')) unless correct_keys(hash, 'a').empty?
+        unless zero_keys(hash, 'b').empty?
+          @client.hdel("#{hash['s']}_bids", zero_keys(hash, 'b'))
+        end
+        unless correct_keys(hash, 'b').empty?
+          @client.hmset("#{hash['s']}_bids", *correct_keys(hash, 'b'))
+        end
+        unless zero_keys(hash, 'a').empty?
+          @client.hdel("#{hash['s']}_asks", zero_keys(hash, 'a'))
+        end
+        unless correct_keys(hash, 'a').empty?
+          @client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a'))
+        end
       end
     end
 
     def zero_keys(hash, key)
-      hash[key].map { |i| i[0] if i[1] === "0.00000000" }.compact
-		end
+      hash[key].map { |i| i[0] if i[1] == ZERO_AMOUNT }.compact
+    end
 
     def correct_keys(hash, key)
-      hash[key].select { |i| i[0] if i[1] != "0.00000000" }
-		end
+      hash[key].select { |i| i[0] if i[1] != ZERO_AMOUNT }
+    end
   end
 end

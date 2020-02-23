@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'faye/websocket'
 require 'json'
 require_relative 'snapshot/create_task'
@@ -5,9 +7,10 @@ require_relative '../config/config_loader'
 
 module Binance
   module Listener
+    # WS Listener
     class CurrencyDiff
       def initialize(config)
-        @store = config[:store] || ::Binance::Store.new 
+        @store = config[:store] || ::Binance::Store.new
         @currency_pair = config[:currency_pair]
         @pair_config = config[:pair_config] || ::Binance::ConfigLoader.instance
         @snapshot = config[:snapshot] ||
@@ -27,8 +30,9 @@ module Binance
       attr_reader :ws_client
 
       def listen_ws
-        ws_client.on :open do |event|
-					@store.reset_store
+        ws_client.on :open do |_|
+          # TODO: correct reset of store
+          @store.reset_store
           @snapshot.call
         end
 
@@ -36,7 +40,7 @@ module Binance
           @store.queue_work(event.data)
         end
 
-        ws_client.on :close do |event|
+        ws_client.on :close do |_|
           listen_ws
         end
       end
@@ -51,4 +55,3 @@ module Binance
     end
   end
 end
-

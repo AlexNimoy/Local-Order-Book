@@ -1,18 +1,21 @@
+# frozen_string_literal: true
+
 require_relative '../../store/store'
 require_relative 'receive'
 
 module Binance
   module Listener
     module Snapshot
+      # CreateTask for worker
       class CreateTask
         def initialize(config)
           @api_url = config[:api_url]
           @currency_pair = config[:currency_pair]
-          @store = config[:store] || ::Binance::Store.new 
-          @snapshot = config[:snapshot]|| Snapshot::Receive.new(@api_url)
+          @store = config[:store] || ::Binance::Store.new
+          @snapshot = config[:snapshot] || Snapshot::Receive.new(@api_url)
         end
 
-        def call 
+        def call
           snapshot = JSON.parse(@snapshot.call)
           @store.queue_work(snapshot.merge(s: @currency_pair).to_json)
         end
@@ -20,4 +23,3 @@ module Binance
     end
   end
 end
-
