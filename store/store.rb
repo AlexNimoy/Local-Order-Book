@@ -69,18 +69,17 @@ module Binance
     def save_diff(hash)
       client.multi do
         client.hmset("#{hash['s']}_info", 'U', hash['U'], 'u', hash['u'])
-        unless zero_keys(hash, 'b').empty?
-          client.hdel("#{hash['s']}_bids", zero_keys(hash, 'b'))
-        end
-        unless correct_keys(hash, 'b').empty?
-          client.hmset("#{hash['s']}_bids", *correct_keys(hash, 'b'))
-        end
-        unless zero_keys(hash, 'a').empty?
-          client.hdel("#{hash['s']}_asks", zero_keys(hash, 'a'))
-        end
-        unless correct_keys(hash, 'a').empty?
-          client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a'))
-        end
+        update_diff_keys(hash, 'b', 'bids')
+        update_diff_keys(hash, 'a', 'asks')
+      end
+    end
+
+    def update_diff_keys(hash, key, postfix)
+      unless zero_keys(hash, key).empty?
+        client.hdel("#{hash['s']}_#{postfix}", zero_keys(hash, key))
+      end
+      unless correct_keys(hash, key).empty?
+        client.hmset("#{hash['s']}_#{postfix}", *correct_keys(hash, key))
       end
     end
   end
