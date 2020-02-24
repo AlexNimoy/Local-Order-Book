@@ -8,6 +8,8 @@ module Binance
   # Redis store
   class Store
     include StoreHelper
+    attr_reader :client, :tasks, :queue
+
     def initialize
       @queue = ENV.fetch('WORK_QUEUE', 'binance_queue')
       @tasks = ENV.fetch('TASKS_HASH', 'binance_tasks')
@@ -20,64 +22,64 @@ module Binance
     end
 
     def reset_store
-      @client.flushall
+      client.flushall
     end
 
     def select_all_from(table)
-      @client.hgetall(table)
+      client.hgetall(table)
     end
 
     def queue_work(value)
       key = SecureRandom.uuid
-      @client.multi do
-        @client.hset(@tasks, key, value)
-        @client.rpush(@queue, key)
+      client.multi do
+        client.hset(tasks, key, value)
+        client.rpush(queue, key)
       end
     end
 
     def next_task
-      uuid = @client.lpop(@queue)
+      uuid = client.lpop(queue)
       return unless uuid
 
-      task_payload = @client.hget(@tasks, uuid)
-      @client.hdel(@tasks, uuid)
+      task_payload = client.hget(tasks, uuid)
+      client.hdel(tasks, uuid)
       task_payload
     end
 
     def snapshot_last_update(hash)
-      @client.hget("#{hash['s']}_info", 'lastUpdateId')
+      client.hget("#{hash['s']}_info", 'lastUpdateId')
     end
 
     def save_snapshot(hash)
-      @client.multi do
-        @client.hset("#{hash['s']}_info", 'lastUpdateId', hash['lastUpdateId'])
-        @client.hmset("#{hash['s']}_bids", *hash['bids'])
-        @client.hmset("#{hash['s']}_asks", *hash['asks'])
+      client.multi do
+        client.hset("#{hash['s']}_info", 'lastUpdateId', hash['lastUpdateId'])
+        client.hmset("#{hash['s']}_bids", *hash['bids'])
+        client.hmset("#{hash['s']}_asks", *hash['asks'])
       end
     end
 
     def delete_last_diff(hash)
-      @client.hdel("#{hash['s']}_info", 'U', 'u')
+      client.hdel("#{hash['s']}_info", 'U', 'u')
     end
 
     def currency_info(hash)
-      @client.hgetall("#{hash['s']}_info")
+      client.hgetall("#{hash['s']}_info")
     end
 
     def save_diff(hash)
-      @client.multi do
-        @client.hmset("#{hash['s']}_info", 'U', hash['U'], 'u', hash['u'])
+      client.multi do
+        client.hmset("#{hash['s']}_info", 'U', hash['U'], 'u', hash['u'])
         unless zero_keys(hash, 'b').empty?
-          @client.hdel("#{hash['s']}_bids", zero_keys(hash, 'b'))
+          client.hdel("#{hash['s']}_bids", zero_keys(hash, 'b'))
         end
         unless correct_keys(hash, 'b').empty?
-          @client.hmset("#{hash['s']}_bids", *correct_keys(hash, 'b'))
+          client.hmset("#{hash['s']}_bids", *correct_keys(hash, 'b'))
         end
         unless zero_keys(hash, 'a').empty?
-          @client.hdel("#{hash['s']}_asks", zero_keys(hash, 'a'))
+          client.hdel("#{hash['s']}_asks", zero_keys(hash, 'a'))
         end
         unless correct_keys(hash, 'a').empty?
-          @client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a'))
+          client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a'))
         end
       end
     end
