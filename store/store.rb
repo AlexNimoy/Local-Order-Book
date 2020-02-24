@@ -2,11 +2,12 @@
 
 require 'redis'
 require 'securerandom'
+require_relative 'store_helper'
 
 module Binance
   # Redis store
   class Store
-    ZERO_AMOUNT = '0.00000000'
+    include StoreHelper
     def initialize
       @queue = ENV.fetch('WORK_QUEUE', 'binance_queue')
       @tasks = ENV.fetch('TASKS_HASH', 'binance_tasks')
@@ -79,14 +80,6 @@ module Binance
           @client.hmset("#{hash['s']}_asks", *correct_keys(hash, 'a'))
         end
       end
-    end
-
-    def zero_keys(hash, key)
-      hash[key].map { |i| i[0] if i[1] == ZERO_AMOUNT }.compact
-    end
-
-    def correct_keys(hash, key)
-      hash[key].select { |i| i[0] if i[1] != ZERO_AMOUNT }
     end
   end
 end
