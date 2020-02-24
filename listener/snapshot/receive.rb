@@ -13,8 +13,8 @@ module Binance
 
         def call
           uri = URI(@uri)
-          @res = Net::HTTP.get_response(uri)
-          @res.body
+          res = Net::HTTP.get_response(uri)
+          res.body
         end
       end
     end
